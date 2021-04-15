@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Dapper" Version="2.0.78" />
+        <PackageReference Include="JunitXml.TestLogger" Version="3.0.87" />
+        <PackageReference Include="Npgsql" Version="5.0.4" />
+        <PackageReference Include="NUnit" Version="3.12.0" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+        <PackageReference Include="Shouldly" Version="4.0.3" />
+    </ItemGroup>
+
+</Project>

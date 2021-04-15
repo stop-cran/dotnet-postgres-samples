@@ -1,0 +1,38 @@
+name: .NET 5
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET 5
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.100
+    - name: Build project
+      run: dotnet build
+    - name: Run unit tests
+      run: dotnet test --no-build -l "junit;LogFilePath=test-results.xml"
+    - name: Print test results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        files: tests/test-results.xml
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: Test123!
