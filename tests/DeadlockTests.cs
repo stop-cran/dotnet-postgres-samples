@@ -9,7 +9,7 @@ using Shouldly;
 
 namespace PostgresSamples
 {
-    public class Tests
+    public class DeadlockTests
     {
         private NpgsqlConnection _connection = null!;
         private NpgsqlConnection _connection2 = null!;
