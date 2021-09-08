@@ -90,13 +90,46 @@ namespace PostgresSamples
 
             await Task.WhenAll(
                     _connection.ExecuteAsync(
-                        "select name from public.test where id = 1 for update;select pg_sleep(0.5);select name from public.test where id = 2 for update;",
+                        "select name from public.test where id = 1 for update; select pg_sleep(0.5); update public.test set name = 'test1' where id = 2;",
                         _cancel.Token),
                     _connection2.ExecuteAsync(
-                        "select name from public.test where id = 2 for update;select pg_sleep(0.5);select name from public.test where id = 1 for update;",
+                        "select name from public.test where id = 2 for update; select pg_sleep(0.5); update public.test set name = 'test2' where id = 1;",
                         _cancel.Token))
                 .CheckAnswerConcurrentSelectForUpdate();
         }
+
+        [Test]
+        public async Task TestConcurrentRepeatableReadUpdate()
+        {
+            await _connection.ExecuteAsync(
+                "INSERT INTO public.test (id, name) values (1, 'test1');",
+                _cancel.Token);
+
+            const string sql = "update public.test set name = 'test2' where id = 1;";
+
+            async Task Transation1()
+            {
+                await using var transaction =
+                    await _connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, _cancel.Token);
+
+                await _connection.ExecuteAsync(
+                    new CommandDefinition(sql, transaction, cancellationToken: _cancel.Token));
+                await transaction.CommitAsync(_cancel.Token);
+            }
+
+            async Task Transation2()
+            {
+                await using var transaction =
+                    await _connection2.BeginTransactionAsync(IsolationLevel.RepeatableRead, _cancel.Token);
+
+                await _connection2.ExecuteAsync(new CommandDefinition(sql, transaction,
+                    cancellationToken: _cancel.Token));
+                await transaction.CommitAsync(_cancel.Token);
+            }
+
+            await Task.WhenAll(Transation1(), Transation2()).CheckAnswerConcurrentRepeatableReadUpdate();
+        }
+
 
         [Test]
         public async Task TestConcurrentSelectSeparateRequests()
