@@ -31,7 +31,12 @@ namespace PostgresSamples
             ex.Severity.ShouldBe("ERROR");
             ex.SqlState.ShouldBe("40001");
         }
-        
+
+        public static async Task CheckAnswerConcurrentRepeatableReadUpdateLock(this Task task)
+        {
+            await task;
+        }
+
         public static async Task CheckAnswerConcurrentSelectSeparateRequests(this Task task)
         {
             var ex = await task.ShouldThrowAsync<PostgresException>();

@@ -98,6 +98,16 @@ namespace PostgresSamples
                 .CheckAnswerConcurrentSelectForUpdate();
         }
 
+        async Task RepeatableReadTransation(NpgsqlConnection c, string sql)
+        {
+            await using var transaction =
+                await c.BeginTransactionAsync(IsolationLevel.RepeatableRead, _cancel.Token);
+
+            await c.ExecuteAsync(
+                new CommandDefinition(sql, transaction, cancellationToken: _cancel.Token));
+            await transaction.CommitAsync(_cancel.Token);
+        }
+
         [Test]
         public async Task TestConcurrentRepeatableReadUpdate()
         {
@@ -105,29 +115,24 @@ namespace PostgresSamples
                 "INSERT INTO public.test (id, name) values (1, 'test1');",
                 _cancel.Token);
 
-            const string sql = "update public.test set name = 'test2' where id = 1;";
+            const string sql = "update public.test set name = 'test2' where id = 1; select pg_sleep(0.5);";
 
-            async Task Transation1()
-            {
-                await using var transaction =
-                    await _connection.BeginTransactionAsync(IsolationLevel.RepeatableRead, _cancel.Token);
+            await Task.WhenAll(RepeatableReadTransation(_connection, sql), RepeatableReadTransation(_connection2, sql))
+                .CheckAnswerConcurrentRepeatableReadUpdate();
+        }
+        
+        
+        [Test]
+        public async Task TestConcurrentRepeatableReadUpdateLock()
+        {
+            await _connection.ExecuteAsync(
+                "INSERT INTO public.test (id, name) values (1, 'test1');",
+                _cancel.Token);
 
-                await _connection.ExecuteAsync(
-                    new CommandDefinition(sql, transaction, cancellationToken: _cancel.Token));
-                await transaction.CommitAsync(_cancel.Token);
-            }
+            const string sql = "lock table public.test in share row exclusive mode; update public.test set name = 'test2' where id = 1; select pg_sleep(0.5);";
 
-            async Task Transation2()
-            {
-                await using var transaction =
-                    await _connection2.BeginTransactionAsync(IsolationLevel.RepeatableRead, _cancel.Token);
-
-                await _connection2.ExecuteAsync(new CommandDefinition(sql, transaction,
-                    cancellationToken: _cancel.Token));
-                await transaction.CommitAsync(_cancel.Token);
-            }
-
-            await Task.WhenAll(Transation1(), Transation2()).CheckAnswerConcurrentRepeatableReadUpdate();
+            await Task.WhenAll(RepeatableReadTransation(_connection, sql), RepeatableReadTransation(_connection2, sql))
+                .CheckAnswerConcurrentRepeatableReadUpdateLock();
         }
 
 
