@@ -8,7 +8,7 @@ namespace PostgresSamples.Hints
         public static IQueryable<T> ForUpdate<T>(this IQueryable<T> source) =>
             source.TagWith(ForUpdateInterceptor.QueryTag);
         
-        public static DbContextOptionsBuilder UseQueryHints(this DbContextOptionsBuilder builder) =>
+        public static DbContextOptionsBuilder UseLockModifiers(this DbContextOptionsBuilder builder) =>
             builder.AddInterceptors(new ForUpdateInterceptor());
     }
 }

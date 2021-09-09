@@ -1,8 +1,11 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
@@ -41,7 +44,7 @@ namespace PostgresSamples
 
             dbContext = new SomeDbContext(new DbContextOptionsBuilder<SomeDbContext>()
                 .UseNpgsql("Server=localhost;Port=5432;Database=postgres;User Id=postgres;Password=Test123!")
-                .UseQueryHints()
+                .UseLockModifiers()
                 .UseLoggerFactory(LoggerFactory.Create(builder =>
                     builder
                         .SetMinimumLevel(LogLevel.Error)
@@ -99,6 +102,51 @@ namespace PostgresSamples
 
             item.Children1.ShouldHaveSingleItem();
             item.Children2.ShouldHaveSingleItem();
+        }
+
+
+        [Test]
+        public async Task TestTake()
+        {
+            var result = await dbContext
+                .ParentEntities
+                .AsNoTracking()
+                .Take(10)
+                .ToListAsync(_cancel.Token);
+
+            var item = result.ShouldHaveSingleItem();
+        }
+
+        [Test]
+        public async Task TestChangeTracker()
+        {
+            var result = await dbContext
+                .ParentEntities
+                .FirstAsync(_cancel.Token);
+            dbContext.ChangeTracker.HasChanges().ShouldBeFalse();
+            result.Name = "another name";
+            dbContext.ChangeTracker.HasChanges().ShouldBeTrue();
+        }
+
+
+        [Test]
+        public async Task TestQueryCaching()
+        {
+            async Task<IReadOnlyList<ParentEntity>> TestQueryCaching(params int[] ids) =>
+                await dbContext
+                    .ParentEntities
+                    .AsNoTracking()
+                    .Where(e => ids.Contains(e.Id))
+                    .ForUpdate()
+                    .ToListAsync(_cancel.Token);
+            var cache = dbContext.GetService<IMemoryCache>().ShouldBeOfType<MemoryCache>();
+            var cnt = cache.Count;
+
+            await TestQueryCaching(1, 5, 9);
+            cache.Count.ShouldBeGreaterThan(cnt);
+            cnt = cache.Count;
+            await TestQueryCaching(2, 6, 8);
+            cache.Count.ShouldBe(cnt);
         }
     }
 }
