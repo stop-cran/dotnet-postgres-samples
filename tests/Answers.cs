@@ -44,5 +44,13 @@ namespace PostgresSamples
             ex.Severity.ShouldBe("ERROR");
             ex.SqlState.ShouldBe("40P01");
         }
+        
+        public static async Task CheckAnswerSerializationAnomaly(this Task task)
+        {
+            var ex = await task.ShouldThrowAsync<PostgresException>();
+            
+            ex.Severity.ShouldBe("ERROR");
+            ex.SqlState.ShouldBe("40001");
+        }
     }
 }
