@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,6 +72,24 @@ namespace PostgresSamples
             result.ShouldHaveSingleItem();
         }
 
+
+        [Test]
+        public async Task TestTransaction()
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, _cancel.Token);
+            var entities = await dbContext.SomeEntities.ToListAsync(_cancel.Token);
+            
+            entities.ShouldBeEmpty();
+            dbContext.SomeEntities.Add(new SomeEntity
+            {
+                Id = 1,
+                Name = "srthsrt"
+            });
+
+            await dbContext.SaveChangesAsync(_cancel.Token);
+            await transaction.CommitAsync(_cancel.Token);
+        }
+
         [Test]
         public async Task TestSingleQuery()
         {
@@ -139,6 +158,7 @@ namespace PostgresSamples
                     .Where(e => ids.Contains(e.Id))
                     .ForUpdate()
                     .ToListAsync(_cancel.Token);
+
             var cache = dbContext.GetService<IMemoryCache>().ShouldBeOfType<MemoryCache>();
             var cnt = cache.Count;
 
