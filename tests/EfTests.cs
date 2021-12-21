@@ -10,8 +10,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NUnit.Framework;
-using PostgresSamples.Hints;
 using PostgresSamples.Model;
+using PostgresSamples.SqlGenerators;
 using Shouldly;
 
 namespace PostgresSamples
